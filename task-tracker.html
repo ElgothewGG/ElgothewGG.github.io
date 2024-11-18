@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Tarefas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 0;
+      cursor: pointer;
+    }
+    input {
+      padding: 10px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    #tempoDecorrido {
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Registro de Tarefas</h1>
+  <input type="text" id="nomeDaTarefa" placeholder="Digite o nome da tarefa">
+  <input type="text" id="nomeDoResponsavel" placeholder="Digite o nome do responsável">
+  <button id="iniciarBtn">Iniciar Tarefa</button>
+  <button id="pararBtn" disabled>Parar Tarefa</button>
+  <p id="status"></p>
+  <p>Tempo decorrido: <span id="tempoDecorrido">00:00:00</span></p>
+  <script>
+    let horaDeInicio, horaDeTermino, intervaloTimer;
+
+    document.getElementById('iniciarBtn').addEventListener('click', () => {
+      const nomeDaTarefa = document.getElementById('nomeDaTarefa').value;
+      const nomeDoResponsavel = document.getElementById('nomeDoResponsavel').value;
+
+      if (!nomeDaTarefa || !nomeDoResponsavel) {
+        alert('Por favor, preencha todos os campos.');
+        return;
+      }
+
+      horaDeInicio = new Date();
+      atualizarTempoDecorrido();
+      intervaloTimer = setInterval(atualizarTempoDecorrido, 1000);
+
+      document.getElementById('status').innerText = `Tarefa "${nomeDaTarefa}" iniciada por ${nomeDoResponsavel} às ${horaDeInicio.toLocaleTimeString("pt-BR")}`;
+      document.getElementById('iniciarBtn').disabled = true;
+      document.getElementById('pararBtn').disabled = false;
+    });
+
+    document.getElementById('pararBtn').addEventListener('click', async () => {
+      const nomeDaTarefa = document.getElementById('nomeDaTarefa').value;
+      const nomeDoResponsavel = document.getElementById('nomeDoResponsavel').value;
+
+      if (!horaDeInicio) {
+        alert('Inicie a tarefa primeiro.');
+        return;
+      }
+
+      horaDeTermino = new Date();
+      clearInterval(intervaloTimer);
+      const duracao = Math.round((horaDeTermino - horaDeInicio) / 60000);
+      const data = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+      const dados = {
+        nomeDaTarefa,
+        nomeDoResponsavel,
+        horaDeInicio: horaDeInicio.toISOString(),
+        horaDeTermino: horaDeTermino.toISOString(),
+        duracao,
+        data
+      };
+
+      try {
+     const resposta = await fetch('https://script.google.com/macros/s/AKfycbw4gyv8PamCojWOspgAZWXJ0jPXQy_EnDFZHtIhP2iKy-h5Iu8cPYKEX13Eod_R40HL/exec', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(dados)
+});
+
+        if (resposta.ok) {
+          document.getElementById('status').innerText = `Tarefa "${nomeDaTarefa}" concluída por ${nomeDoResponsavel}. Duração: ${duracao} minutos.`;
+        } else {
+          document.getElementById('status').innerText = `Falha ao salvar a tarefa "${nomeDaTarefa}".`;
+        }
+      } catch (erro) {
+        document.getElementById('status').innerText = `Erro: ${erro.message}`;
+      }
+
+      document.getElementById('iniciarBtn').disabled = false;
+      document.getElementById('pararBtn').disabled = true;
+      document.getElementById('nomeDaTarefa').value = '';
+      document.getElementById('nomeDoResponsavel').value = '';
+      document.getElementById('tempoDecorrido').innerText = "00:00:00";
+    });
+
+    function atualizarTempoDecorrido() {
+      if (!horaDeInicio) return;
+
+      const agora = new Date();
+      const decorrido = Math.floor((agora - horaDeInicio) / 1000);
+      const horas = Math.floor(decorrido / 3600).toString().padStart(2, '0');
+      const minutos = Math.floor((decorrido % 3600) / 60).toString().padStart(2, '0');
+      const segundos = (decorrido % 60).toString().padStart(2, '0');
+
+      document.getElementById('tempoDecorrido').innerText = `${horas}:${minutos}:${segundos}`;
+    }
+  </script>
+</body>
+</html>
